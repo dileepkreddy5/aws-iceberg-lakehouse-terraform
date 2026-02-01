@@ -13,17 +13,54 @@ This is not a demo or “learning-only” project. It’s structured the way I w
 ## High-Level Architecture
 
 At a high level, the platform consists of:
+```mermaid
+flowchart TB
+    subgraph IaC["Infrastructure as Code"]
+        TF[Terraform]
+    end
 
-- **Amazon S3** as the primary storage layer (raw, curated, analytics zones)
-- **Apache Iceberg** to manage tables with transactions, schema evolution, and versioning
-- **AWS Glue Data Catalog** to store Iceberg table metadata
-- **Amazon Athena** for serverless SQL querying
-- **Terraform** to provision and manage infrastructure
-- **IAM and encryption** for security and access control
-- **AWS Budgets** to keep costs predictable
+    subgraph Storage["Data Storage Layer"]
+        S3Raw[S3 - Raw Zone]
+        S3Curated[S3 - Curated Zone]
+        S3Analytics[S3 - Analytics Zone]
+    end
 
-The architecture diagram (in the `diagrams/` folder) shows how these components fit together.
+    subgraph Metadata["Metadata & Table Management"]
+        Iceberg[Apache Iceberg Tables]
+        Glue[AWS Glue Data Catalog]
+    end
 
+    subgraph Query["Query & Analytics"]
+        Athena[Amazon Athena]
+    end
+
+    subgraph Security["Security & Governance"]
+        IAM[IAM Policies]
+        KMS[KMS Encryption]
+    end
+
+    TF --> S3Raw
+    TF --> S3Curated
+    TF --> S3Analytics
+    TF --> Glue
+    TF --> IAM
+    TF --> KMS
+
+    S3Raw --> Iceberg
+    S3Curated --> Iceberg
+    S3Analytics --> Iceberg
+
+    Iceberg --> Glue
+    Athena --> Iceberg
+    Athena --> S3Analytics
+
+    IAM -.-> Athena
+    IAM -.-> S3Raw
+    IAM -.-> S3Curated
+    IAM -.-> S3Analytics
+    KMS -.-> S3Raw
+    KMS -.-> S3Curated
+    KMS -.-> S3Analytics
 ---
 
 ## Why Apache Iceberg
