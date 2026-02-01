@@ -51,6 +51,7 @@ TF --> KMS
 S3Curated --> Glue
 Glue --> Athena
 Athena --> S3Curated
+
 ![Project Structure](diagrams/architecture.png)
 ---
 
