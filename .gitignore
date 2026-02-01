@@ -2,16 +2,9 @@
 .terraform/
 *.tfstate
 *.tfstate.*
-crash.log
-crash.*.log
-
-# Terraform plan files
-*.tfplan
+terraform.tfvars
+.terraform.lock.hcl
 
 # OS
 .DS_Store
-
-# Editor
-.vscode/
-.idea/
 
