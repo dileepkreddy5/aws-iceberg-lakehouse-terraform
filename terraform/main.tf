@@ -6,3 +6,11 @@ locals {
   }
 }
 
+module "s3_lakehouse" {
+  source = "../modules/s3-lakehouse"
+
+  project_name = var.project_name
+  environment  = var.environment
+  tags         = local.common_tags
+}
+
