@@ -1,0 +1,17 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform plan files
+*.tfplan
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
