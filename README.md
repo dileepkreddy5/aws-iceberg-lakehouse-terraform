@@ -12,55 +12,46 @@ This is not a demo or “learning-only” project. It’s structured the way I w
 
 ## High-Level Architecture
 
-At a high level, the platform consists of:
-```mermaid
 flowchart TB
-    subgraph IaC["Infrastructure as Code"]
-        TF[Terraform]
-    end
 
-    subgraph Storage["Data Storage Layer"]
-        S3Raw[S3 - Raw Zone]
-        S3Curated[S3 - Curated Zone]
-        S3Analytics[S3 - Analytics Zone]
-    end
+%% Infrastructure as Code
+subgraph IaC["Infrastructure as Code"]
+    TF[Terraform]
+end
 
-    subgraph Metadata["Metadata & Table Management"]
-        Iceberg[Apache Iceberg Tables]
-        Glue[AWS Glue Data Catalog]
-    end
+%% Storage Layer
+subgraph Storage["Data Storage Layer"]
+    S3Raw["S3 Raw Zone"]
+    S3Curated["S3 Curated Zone (Iceberg Tables)"]
+end
 
-    subgraph Query["Query & Analytics"]
-        Athena[Amazon Athena]
-    end
+%% Metadata Layer
+subgraph Metadata["Metadata & Governance"]
+    Glue["AWS Glue Data Catalog"]
+end
 
-    subgraph Security["Security & Governance"]
-        IAM[IAM Policies]
-        KMS[KMS Encryption]
-    end
+%% Query Layer
+subgraph Query["Analytics & Query"]
+    Athena["Amazon Athena"]
+end
 
-    TF --> S3Raw
-    TF --> S3Curated
-    TF --> S3Analytics
-    TF --> Glue
-    TF --> IAM
-    TF --> KMS
+%% Security Layer
+subgraph Security["Security & Access"]
+    IAM["IAM Policies"]
+    KMS["KMS Encryption"]
+end
 
-    S3Raw --> Iceberg
-    S3Curated --> Iceberg
-    S3Analytics --> Iceberg
+%% Relationships
+TF --> S3Raw
+TF --> S3Curated
+TF --> Glue
+TF --> IAM
+TF --> KMS
 
-    Iceberg --> Glue
-    Athena --> Iceberg
-    Athena --> S3Analytics
-
-    IAM -.-> Athena
-    IAM -.-> S3Raw
-    IAM -.-> S3Curated
-    IAM -.-> S3Analytics
-    KMS -.-> S3Raw
-    KMS -.-> S3Curated
-    KMS -.-> S3Analytics
+S3Curated --> Glue
+Glue --> Athena
+Athena --> S3Curated
+![Project Structure](diagrams/architecture.png)
 ---
 
 ## Why Apache Iceberg
