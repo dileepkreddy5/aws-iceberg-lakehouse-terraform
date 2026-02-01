@@ -4,9 +4,9 @@
 
 In this project, I built a transactional data lakehouse on AWS using **Apache Iceberg** and **Terraform**.
 
-The goal was simple: design a storage layer that works well for analytics today, but is also flexible enough to support machine learning and GenAI workloads tomorrow — without locking into a single vendor or running expensive always-on infrastructure.
+The goal was straightforward: design a storage and analytics foundation that works well for today’s reporting and analytics needs, while remaining flexible enough to support machine learning and GenAI workloads in the future — without locking into a single vendor or tightly coupled platform.
 
-This is not a demo project. It’s structured the way I would build the foundation of a real data platform in an enterprise environment.
+This is not a demo or “learning-only” project. It’s structured the way I would build the foundation of a real data platform in an enterprise environment.
 
 ---
 
@@ -14,42 +14,42 @@ This is not a demo project. It’s structured the way I would build the foundati
 
 At a high level, the platform consists of:
 
-- **Amazon S3** as the primary storage layer  
-- **Apache Iceberg** to manage tables with transactions, schema evolution, and versioning  
-- **AWS Glue Data Catalog** to store table metadata  
-- **Amazon Athena** for serverless SQL querying  
-- **Terraform** to provision and manage all infrastructure  
-- **IAM and KMS** for security and encryption  
-- **AWS Budgets** to keep costs under control  
+- **Amazon S3** as the primary storage layer (raw, curated, analytics zones)
+- **Apache Iceberg** to manage tables with transactions, schema evolution, and versioning
+- **AWS Glue Data Catalog** to store Iceberg table metadata
+- **Amazon Athena** for serverless SQL querying
+- **Terraform** to provision and manage infrastructure
+- **IAM and encryption** for security and access control
+- **AWS Budgets** to keep costs predictable
 
 The architecture diagram (in the `diagrams/` folder) shows how these components fit together.
 
 ---
 
-## Why I Chose Apache Iceberg
+## Why Apache Iceberg
 
-I chose **Apache Iceberg** instead of formats like Delta Lake or plain Parquet for a few reasons:
+I chose **Apache Iceberg** instead of formats like Delta Lake or plain Parquet for several reasons:
 
-- I wanted an **open table format** that doesn’t lock me into a specific vendor or platform.
-- Iceberg works well with multiple engines (Athena today, Spark or Trino later).
-- It supports **ACID transactions**, which makes concurrent reads and writes safer.
-- Schema changes don’t require rewriting entire datasets.
-- Built-in **time travel** makes it easier to debug issues or roll back bad data.
+- I wanted an **open table format** that avoids vendor lock-in.
+- Iceberg works across multiple engines (Athena today, Spark or Trino later).
+- It supports **ACID transactions**, which is critical for concurrent reads and writes.
+- Schema changes can be applied without rewriting entire datasets.
+- Built-in **time travel** makes debugging, auditing, and rollback much easier.
 
-For modern analytics and AI-driven use cases, these features matter a lot more than just storing files in S3.
+For modern analytics platforms — especially those feeding downstream AI or ML systems — these capabilities are far more important than simply storing files in S3.
 
 ---
 
 ## Why Amazon Athena
 
-Athena was a deliberate choice for the first version of this platform.
+Athena was a deliberate choice for the initial query layer.
 
-- It’s serverless, so there’s no cluster to manage or pay for when idle.
-- You only pay for the queries you run.
-- It integrates cleanly with Iceberg and Glue.
-- It’s a good fit for ad-hoc analysis, BI queries, and feature extraction.
+- It’s fully serverless, so there’s no infrastructure to manage.
+- You pay only for the queries you run.
+- It integrates cleanly with Iceberg and the Glue Data Catalog.
+- It’s well-suited for ad-hoc analytics, BI queries, and feature exploration.
 
-If the workload later requires heavier transformations, this setup can be extended with Spark or EMR without changing the underlying storage design.
+If future workloads require heavier transformations or sustained compute, this architecture can be extended with Spark or EMR without changing the underlying storage design.
 
 ---
 
@@ -57,92 +57,76 @@ If the workload later requires heavier transformations, this setup can be extend
 
 All infrastructure in this project is provisioned using **Terraform**.
 
-This makes the setup:
-- Reproducible
-- Auditable
-- Easy to tear down when not in use
-- Consistent across environments
+This makes the platform:
+- Reproducible across environments
+- Auditable and version-controlled
+- Easy to extend as requirements evolve
 
-It also reflects how I manage cloud infrastructure in real projects — not through the console, but through version-controlled code.
-
----
-
-## Data Layout
-
-The lakehouse follows a simple and practical zone-based layout:
-
-- **Raw zone**  
-  Stores incoming data in its original form. This layer is immutable and acts as the source of truth.
-
-- **Curated zone**  
-  Cleaned and validated datasets managed as Iceberg tables.
-
-- **Analytics zone**  
-  Query-optimized Iceberg tables used for reporting, ML feature generation, and downstream applications.
-
-Each Iceberg table is versioned and partitioned to support efficient querying and safe updates.
+Terraform is intentionally used only for **infrastructure components**, not data definitions.
 
 ---
 
-## Terraform Structure
+## Iceberg Table Management
 
-Terraform code is split into focused modules, each with a clear responsibility:
+Iceberg tables are created using **Amazon Athena DDL**, rather than Terraform.
 
-- `s3-lakehouse` – creates storage buckets and lifecycle policies  
-- `glue-catalog` – manages Iceberg table metadata  
-- `iam` – defines least-privilege roles and policies  
-- `kms` – handles encryption keys  
-- `athena` – configures workgroups and query limits  
-- `budgets` – enforces cost controls  
+This is an intentional design decision. Iceberg tables must be created by an Iceberg-aware engine in order to generate the required metadata (snapshots, manifests, and version history). Terraform can register Glue tables, but it cannot create valid Iceberg metadata on its own.
 
-This modular approach mirrors how production cloud platforms are typically organized.
+Terraform manages:
+- S3 buckets and folder structure
+- Glue Data Catalog databases
+- Security and encryption settings
+
+Athena manages:
+- Iceberg table creation
+- Schema evolution
+- Inserts and updates
+- Time travel queries
+
+### Features Demonstrated
+- Apache Iceberg table creation using Athena
+- Schema evolution without table rewrites
+- Time travel queries using Iceberg snapshots
+- Serverless querying via Amazon Athena
 
 ---
 
 ## Cost Management
 
-Cost control was a design requirement from the beginning.
+To keep costs predictable and low:
 
-To avoid surprise bills:
-- AWS Budgets are configured with alerts
-- Athena workgroups limit query spending
-- S3 lifecycle rules move older data to cheaper storage tiers
-- No long-running compute resources are used
+- Athena is used instead of always-on clusters
+- Query results are stored in a dedicated S3 prefix
+- S3 is used as the primary storage layer
+- The design avoids unnecessary data duplication
+- The platform can be monitored using AWS Budgets and cost reports
 
-The idea is to keep the platform predictable and affordable while still being scalable.
-
----
-
-## Security and Governance
-
-Security is built into the platform, not added later.
-
-- All data is encrypted at rest using KMS
-- IAM roles follow least-privilege principles
-- No public access to S3 buckets or metadata
-- Access to datasets is controlled at the catalog level
-
-This design aligns well with regulated environments such as healthcare or government analytics platforms.
+This makes the setup suitable for experimentation without unexpected spend.
 
 ---
 
-## What This Project Shows
+## Project Structure
 
-This project demonstrates how to:
+diagrams/project-structure.png
 
-- Design a transactional lakehouse using open standards
-- Use Infrastructure as Code for repeatable cloud deployments
-- Balance scalability with cost control
-- Build data foundations that are ready for analytics, ML, and GenAI
-- Make clear architectural decisions and explain the trade-offs
+## Repository Structure
+
+![Project Structure](diagrams/project-structure.png)
+
+The repository is organized to clearly separate infrastructure provisioning,
+data definition, and documentation. This structure mirrors how production data
+platforms are typically managed in enterprise environments.
+
+
 
 ---
 
-## Possible Next Steps
+## What This Project Demonstrates
 
-Some natural extensions to this platform would be:
-- Streaming ingestion into Iceberg tables
-- Fine-grained access control with Lake Formation
-- Feature store integration for ML workloads
-- Cross-region replication for disaster recovery
+This project demonstrates how to design and implement:
+
+- A modern, open lakehouse architecture
+- Transactional analytics on S3 using Iceberg
+- Clean separation between infrastructure and data lifecycle
+- A foundation that can evolve toward ML and GenAI use cases
 
