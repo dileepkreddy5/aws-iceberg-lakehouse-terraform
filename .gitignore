@@ -2,8 +2,9 @@
 .terraform/
 *.tfstate
 *.tfstate.*
+.crash.log
 terraform.tfvars
-.terraform.lock.hcl
+terraform.tfvars.json
 
 # OS
 .DS_Store
